@@ -7,6 +7,8 @@ from datetime import datetime
 from openai import OpenAI
 import uuid
 import os
+import select
+import sys
 
 # --- НАСТРОЙКИ ---
 VK_TOKEN = os.getenv("VK_TOKEN")
@@ -114,22 +116,18 @@ def publish_post():
 schedule.every().day.at("09:00").do(publish_post)
 
 # --- ПУБЛИКАЦИЯ СРАЗУ ---
-import select
-import sys
-
 print("✅ Автопостинг запущен. Введи 'post' чтобы опубликовать вручную, 'exit' — выйти.")
 
 while True:
     if select.select([sys.stdin], [], [], 1)[0]:
-       import sys
+        cmd = sys.stdin.readline().strip()
+        if cmd == "post":
+            publish_post()
+        elif cmd == "exit":
+            print("Завершение работы.")
+            break
+        else:
+            print("Неизвестная команда.")
 
-cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-if cmd == "post":
-        post_to_vk()
-    elif cmd == "exit":
-        print("Завершение работы.")
-        break
-    else:
-        print("Неизвестная команда.")
     schedule.run_pending()
     time.sleep(1)
