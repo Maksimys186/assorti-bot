@@ -128,8 +128,7 @@ if cmd == "post":
     post_to_vk()
 else:
     print("Нет команды или неизвестная команда")
-
-        elif cmd == "exit":
+            elif cmd == "exit":
             print("👋 Скрипт завершён.")
             break
         else:
