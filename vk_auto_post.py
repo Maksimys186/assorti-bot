@@ -125,13 +125,11 @@ while True:
 
 cmd = sys.argv[1] if len(sys.argv) > 1 else ""
 if cmd == "post":
-    post_to_vk()
-else:
-    print("Нет команды или неизвестная команда")
-            elif cmd == "exit":
-            print("👋 Скрипт завершён.")
-            break
-        else:
-            print("❓ Неизвестная команда.")
+        post_to_vk()
+    elif cmd == "exit":
+        print("Завершение работы.")
+        break
+    else:
+        print("Неизвестная команда.")
     schedule.run_pending()
     time.sleep(1)
