@@ -1,24 +1,20 @@
 from dotenv import load_dotenv
 load_dotenv()
-import schedule
-import time
+
 import requests
-from datetime import datetime
-from openai import OpenAI
 import uuid
 import os
-import select
-import sys
+from datetime import datetime
+from openai import OpenAI
 
 # --- НАСТРОЙКИ ---
 VK_TOKEN = os.getenv("VK_TOKEN")
-GROUP_ID = int(os.getenv("GROUP_ID", "-224615724"))
+GROUP_ID = int(os.getenv("VK_GROUP_ID", "-224615724"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# --- ТЕКСТ ПОСТА ---
+# --- ГЕНЕРАЦИЯ ТЕКСТА ---
 def generate_post_text():
     client = OpenAI(api_key=OPENAI_API_KEY)
-
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
@@ -29,17 +25,16 @@ def generate_post_text():
                     "на одну из тем: свободные окна, работы, советы, скидки, запись открыта. "
                     "В конце обязательно добавь:\n"
                     "📞 +7 (900) 390-30-00\n🔗 @club224615724 (Онлайн - Запись)"
-                    "пост должен быть аккуратно написан учитывая прафила инфографике в сообществе ВК"
+                    "Пост должен быть аккуратно написан, учитывая правила инфографики в сообществе ВК."
                 )
             }
         ],
         temperature=0.9,
         max_tokens=300
     )
-
     return response.choices[0].message.content
 
-# --- ИЗОБРАЖЕНИЕ ПО DALL·E 3 ---
+# --- ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЯ ---
 def download_placeholder_image():
     client = OpenAI(api_key=OPENAI_API_KEY)
     prompt = "барбершоп в живых цветах, мужская атмосфера, кресло, парикмахер работает, современный стиль, фокус на детали, реализм, яркий свет, без текста"
@@ -51,7 +46,6 @@ def download_placeholder_image():
         quality="standard",
         n=1
     )
-
     image_url = response.data[0].url
     image_data = requests.get(image_url).content
     filename = f"barber_image_{uuid.uuid4()}.png"
@@ -112,22 +106,6 @@ def publish_post():
     else:
         print(f"[{datetime.now()}] ❌ Ошибка публикации:", response)
 
-# --- ПЛАНИРОВЩИК ---
-schedule.every().day.at("09:00").do(publish_post)
+# --- ЗАПУСК ---
+publish_post()
 
-# --- ПУБЛИКАЦИЯ СРАЗУ ---
-print("✅ Автопостинг запущен. Введи 'post' чтобы опубликовать вручную, 'exit' — выйти.")
-
-while True:
-    if select.select([sys.stdin], [], [], 1)[0]:
-        cmd = sys.stdin.readline().strip()
-        if cmd == "post":
-            publish_post()
-        elif cmd == "exit":
-            print("Завершение работы.")
-            break
-        else:
-            print("Неизвестная команда.")
-
-    schedule.run_pending()
-    time.sleep(1)
