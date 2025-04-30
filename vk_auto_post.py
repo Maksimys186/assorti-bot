@@ -121,9 +121,14 @@ print("✅ Автопостинг запущен. Введи 'post' чтобы �
 
 while True:
     if select.select([sys.stdin], [], [], 1)[0]:
-        cmd = sys.stdin.readline().strip().lower()
-        if cmd == "post":
-            publish_post()
+       import sys
+
+cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+if cmd == "post":
+    post_to_vk()
+else:
+    print("Нет команды или неизвестная команда")
+
         elif cmd == "exit":
             print("👋 Скрипт завершён.")
             break
