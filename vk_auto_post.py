@@ -69,7 +69,7 @@ def download_placeholder_image():
 
 # === ЗАГРУЗКА ФОТО ===
 def upload_photo_to_vk(image_path):
-response_data = requests.get(
+    response_data = requests.get(
     "https://api.vk.com/method/photos.getWallUploadServer",
     params={
         "access_token": VK_TOKEN,
