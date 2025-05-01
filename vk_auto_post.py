@@ -88,29 +88,29 @@ def upload_photo_to_vk(image_path):
 # === ПУБЛИКАЦИЯ ПОСТА ===
 def publish_post():
     print(f"[{datetime.now()}] Генерация поста...")
-    try:
-        text = generate_post_text()
-        image_path = download_placeholder_image()
-        attachment = upload_photo_to_vk(image_path)
+    text = generate_post_text()
+    image_path = download_placeholder_image()
+    attachment = upload_photo_to_vk(image_path)
 
-        response = requests.get(
-            "https://api.vk.com/method/wall.post",
-            params={
-                "access_token": VK_TOKEN,
-                "v": "5.199",
-                "owner_id": GROUP_ID,
-                "message": text,
-                "attachments": attachment
-            }
-        ).json()
+    response = requests.get(
+        "https://api.vk.com/method/wall.post",
+        params={
+            "access_token": VK_TOKEN,
+            "v": "5.199",
+            "owner_id": GROUP_ID,
+            "message": text,
+            "attachments": attachment
+        }
+    ).json()
 
-        if "response" in response:
-            print(f"[{datetime.now()}] ✅ Пост опубликован!")
-        else:
-            print(f"[{datetime.now()}] ❌ Ошибка публикации:", response)
+    # Печатаем весь ответ, даже если ошибка
+    print(f"[{datetime.now()}] 📦 Ответ от VK API:", response)
 
-    except Exception as e:
-        print(f"[{datetime.now()}] ❌ Ошибка при публикации:", e)
+    if "response" in response:
+        print(f"[{datetime.now()}] ✅ Пост опубликован!")
+    else:
+        print(f"[{datetime.now()}] ❌ Ошибка публикации.")
+
 
 # === ЕЖЕДНЕВНОЕ РАСПИСАНИЕ ===
 schedule.every().day.at("09:00").do(publish_post)
