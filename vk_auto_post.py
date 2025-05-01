@@ -6,6 +6,7 @@ from datetime import datetime
 from openai import OpenAI
 import uuid
 from dotenv import load_dotenv
+import sys
 
 # === ЗАГРУЗКА ПЕРЕМЕННЫХ ===
 load_dotenv()
@@ -119,5 +120,20 @@ def publish_post():
             print(f"[{datetime.now()}] ❌ Ошибка публикации:", response)
     except Exception as e:
         print(f"❌ Ошибка при публикации: {e}")
+
+# === ЗАПУСК ===
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd == "post":
+        publish_post()
+    elif cmd == "loop":
+        print("♻️ Запуск ежедневного автоцикла публикаций...")
+        schedule.every().day.at("09:00").do(publish_post)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    else:
+        print("❓ Укажите аргумент: 'post' для публикации, 'loop' — для ежедневного запуска.")
+
 
 
