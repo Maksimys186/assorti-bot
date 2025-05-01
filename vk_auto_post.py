@@ -69,14 +69,19 @@ def download_placeholder_image():
 
 # === ЗАГРУЗКА ФОТО ===
 def upload_photo_to_vk(image_path):
-    upload_url = requests.get(
-        "https://api.vk.com/method/photos.getWallUploadServer",
-        params={
-            "access_token": VK_TOKEN,
-            "v": "5.199",
-            "group_id": abs(GROUP_ID)
-        }
-    ).json()["response"]["upload_url"]
+response_data = requests.get(
+    "https://api.vk.com/method/photos.getWallUploadServer",
+    params={
+        "access_token": VK_TOKEN,
+        "v": "5.199",
+        "group_id": abs(GROUP_ID)
+    }
+).json()
+
+if "error" in response_data:
+    raise Exception(f"VK API Error: {response_data['error']}")
+
+upload_url = response_data["response"]["upload_url"]
 
     with open(image_path, "rb") as file:
         response = requests.post(upload_url, files={"photo": file}).json()
