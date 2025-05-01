@@ -1,20 +1,29 @@
-from dotenv import load_dotenv
-load_dotenv()
-
-import requests
-import uuid
 import os
+import schedule
+import time
+import requests
 from datetime import datetime
 from openai import OpenAI
+import uuid
+from dotenv import load_dotenv
 
-# --- НАСТРОЙКИ ---
+# === ЗАГРУЗКА ПЕРЕМЕННЫХ ===
+load_dotenv()
+
 VK_TOKEN = os.getenv("VK_TOKEN")
 GROUP_ID = int(os.getenv("VK_GROUP_ID", "-224615724"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# --- ГЕНЕРАЦИЯ ТЕКСТА ---
+# Проверка ключей
+if not OPENAI_API_KEY:
+    raise ValueError("❌ OPENAI_API_KEY не найден. Убедитесь, что он указан в .env или в настройках Render.")
+if not VK_TOKEN:
+    raise ValueError("❌ VK_TOKEN не найден. Убедитесь, что он указан в .env или в настройках Render.")
+
+# === ТЕКСТ ПОСТА ===
 def generate_post_text():
     client = OpenAI(api_key=OPENAI_API_KEY)
+
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[
@@ -25,16 +34,17 @@ def generate_post_text():
                     "на одну из тем: свободные окна, работы, советы, скидки, запись открыта. "
                     "В конце обязательно добавь:\n"
                     "📞 +7 (900) 390-30-00\n🔗 @club224615724 (Онлайн - Запись)"
-                    "Пост должен быть аккуратно написан, учитывая правила инфографики в сообществе ВК."
+                    "пост должен быть аккуратно написан учитывая прафила инфографике в сообществе ВК"
                 )
             }
         ],
         temperature=0.9,
         max_tokens=300
     )
+
     return response.choices[0].message.content
 
-# --- ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЯ ---
+# === ИЗОБРАЖЕНИЕ ===
 def download_placeholder_image():
     client = OpenAI(api_key=OPENAI_API_KEY)
     prompt = "барбершоп в живых цветах, мужская атмосфера, кресло, парикмахер работает, современный стиль, фокус на детали, реализм, яркий свет, без текста"
@@ -46,6 +56,7 @@ def download_placeholder_image():
         quality="standard",
         n=1
     )
+
     image_url = response.data[0].url
     image_data = requests.get(image_url).content
     filename = f"barber_image_{uuid.uuid4()}.png"
@@ -55,7 +66,7 @@ def download_placeholder_image():
 
     return filename
 
-# --- ЗАГРУЗКА ФОТО В ВК ---
+# === ЗАГРУЗКА ФОТО ===
 def upload_photo_to_vk(image_path):
     upload_url = requests.get(
         "https://api.vk.com/method/photos.getWallUploadServer",
@@ -83,29 +94,30 @@ def upload_photo_to_vk(image_path):
     photo = save_photo["response"][0]
     return f'photo{photo["owner_id"]}_{photo["id"]}'
 
-# --- ПУБЛИКАЦИЯ ПОСТА ---
+# === ПУБЛИКАЦИЯ ===
 def publish_post():
     print(f"[{datetime.now()}] Генерация поста...")
-    text = generate_post_text()
-    image_path = download_placeholder_image()
-    attachment = upload_photo_to_vk(image_path)
+    try:
+        text = generate_post_text()
+        image_path = download_placeholder_image()
+        attachment = upload_photo_to_vk(image_path)
 
-    response = requests.get(
-        "https://api.vk.com/method/wall.post",
-        params={
-            "access_token": VK_TOKEN,
-            "v": "5.199",
-            "owner_id": GROUP_ID,
-            "message": text,
-            "attachments": attachment
-        }
-    ).json()
+        response = requests.get(
+            "https://api.vk.com/method/wall.post",
+            params={
+                "access_token": VK_TOKEN,
+                "v": "5.199",
+                "owner_id": GROUP_ID,
+                "message": text,
+                "attachments": attachment
+            }
+        ).json()
 
-    if "response" in response:
-        print(f"[{datetime.now()}] ✅ Пост опубликован!")
-    else:
-        print(f"[{datetime.now()}] ❌ Ошибка публикации:", response)
+        if "response" in response:
+            print(f"[{datetime.now()}] ✅ Пост опубликован!")
+        else:
+            print(f"[{datetime.now()}] ❌ Ошибка публикации:", response)
+    except Exception as e:
+        print(f"❌ Ошибка при публикации: {e}")
 
-# --- ЗАПУСК ---
-publish_post()
 
