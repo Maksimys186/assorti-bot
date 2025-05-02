@@ -1,17 +1,16 @@
-import praw
+from reddit_config import reddit
 
-reddit = praw.Reddit(
-    client_id="ТВОЙ_CLIENT_ID",
-    client_secret="ТВОЙ_CLIENT_SECRET",
-    username="ТВОЙ_USERNAME",
-    password="ТВОЙ_PASSWORD",
-    user_agent="assorti-bot by /u/ТВОЙ_USERNAME"
-)
+def fetch_meme():
+    subreddit = reddit.subreddit("memes")  # можно заменить на "funny", "dankmemes" и т.д.
 
-subreddit = reddit.subreddit("funny")  # можно заменить на 'memes', 'dankmemes' и т.д.
+    for post in subreddit.hot(limit=10):
+        if not post.stickied and post.url.endswith(('.jpg', '.png', '.gif')):
+            print("🔹 Название:", post.title)
+            print("🖼️ Ссылка на изображение:", post.url)
+            return post.title, post.url
 
-for post in subreddit.hot(limit=10):
-    if not post.stickied and post.url.endswith(('.jpg', '.png', '.gif')):
-        print("Заголовок:", post.title)
-        print("URL картинки:", post.url)
-        break
+    print("❌ Мем не найден.")
+    return None, None
+
+if __name__ == "__main__":
+    fetch_meme()
