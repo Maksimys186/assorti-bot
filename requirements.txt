@@ -1,5 +1,1 @@
-openai
-requests
-schedule
-python-dotenv
-
+praw==7.7.1
