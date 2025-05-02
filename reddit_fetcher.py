@@ -1,10 +1,9 @@
 import os
 import praw
 import openai
-import vk_api
 import requests
 
-# Reddit Auth
+# Настройки Reddit
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
@@ -13,52 +12,79 @@ reddit = praw.Reddit(
     user_agent="assorti-bot by /u/" + os.getenv("REDDIT_USERNAME")
 )
 
-# OpenAI Auth
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# VK Auth
-vk_session = vk_api.VkApi(token=os.getenv("VK_TOKEN"))
-vk = vk_session.get_api()
-GROUP_ID = int(os.getenv("VK_GROUP_ID"))
-
+# Получение мема
 def fetch_meme():
     subreddit = reddit.subreddit("memes")
     for post in subreddit.hot(limit=10):
-        if not post.stickied and post.url.endswith((".jpg", ".png", ".jpeg")):
+        if not post.stickied and post.url.endswith(('.jpg', '.jpeg', '.png')):
             return post.title, post.url
     return None, None
 
+# Генерация описания через GPT
 def generate_caption(title):
-    prompt = f"Придумай забавный комментарий к мему с названием: \"{title}\". Сделай его коротким и смешным."
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    prompt = f"Придумай короткий, смешной комментарий к мему с названием: \"{title}\" на русском языке."
     response = openai.ChatCompletion.create(
         model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content.strip()
 
-def download_image(url, filename='temp.jpg'):
-    response = requests.get(url)
-    with open(filename, 'wb') as f:
-        f.write(response.content)
-    return filename
+# Публикация в ВК
+def post_to_vk(caption, image_url):
+    vk_token = os.getenv("VK_TOKEN")
+    group_id = os.getenv("VK_GROUP_ID")  # Без знака минус
 
-def post_to_vk(image_path, title, caption):
-    upload = vk_api.VkUpload(vk_session)
-    photo = upload.photo_wall(photos=image_path, group_id=GROUP_ID)
-    attachment = f'photo{photo[0]["owner_id"]}_{photo[0]["id"]}'
-    vk.wall.post(
-        owner_id=-GROUP_ID,
-        message=f"📦 {title}\n💬 {caption}",
-        attachments=attachment
+    # Загружаем фото
+    upload_url = requests.get(
+        "https://api.vk.com/method/photos.getWallUploadServer",
+        params={
+            "access_token": vk_token,
+            "v": "5.199",
+            "group_id": group_id
+        }
+    ).json()["response"]["upload_url"]
+
+    image_data = requests.get(image_url).content
+    files = {"photo": ("image.jpg", image_data)}
+    upload_response = requests.post(upload_url, files=files).json()
+
+    # Сохраняем фото на стену
+    save_response = requests.get(
+        "https://api.vk.com/method/photos.saveWallPhoto",
+        params={
+            "access_token": vk_token,
+            "v": "5.199",
+            "group_id": group_id,
+            "photo": upload_response["photo"],
+            "server": upload_response["server"],
+            "hash": upload_response["hash"]
+        }
+    ).json()
+
+    photo = save_response["response"][0]
+    attachment = f'photo{photo["owner_id"]}_{photo["id"]}'
+
+    # Публикуем пост
+    requests.get(
+        "https://api.vk.com/method/wall.post",
+        params={
+            "access_token": vk_token,
+            "v": "5.199",
+            "owner_id": f"-{group_id}",
+            "message": caption,
+            "attachments": attachment
+        }
     )
 
+# Главная функция
 if __name__ == "__main__":
     title, image_url = fetch_meme()
     if title and image_url:
-        print(f"Название: {title}")
-        print(f"Ссылка на изображение: {image_url}")
+        print("🔹 Название:", title)
+        print("🖼️ Ссылка на изображение:", image_url)
         caption = generate_caption(title)
-        print(f"GPT-описание: {caption}")
-        image_path = download_image(image_url)
-        post_to_vk(image_path, title, caption)
-
+        print("💬 GPT-описание:", caption)
+        post_to_vk(caption, image_url)
+    else:
+        print("❌ Мем не найден.")
